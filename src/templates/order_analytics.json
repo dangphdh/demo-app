@@ -1,0 +1,135 @@
+{
+  "name": "order_analytics",
+  "title": "Order Analytics Template",
+  "description": "Monitor order pipeline, fulfillment metrics, and order status distribution. Perfect for operations teams.",
+  "icon": "📦",
+  "use_case": "Track order status, monitor fulfillment rates, identify bottlenecks in the order pipeline",
+  "catalog": "main",
+  "schema": "analytics",
+  "sources": [
+    {
+      "name": "orders",
+      "type": "table",
+      "catalog": "main",
+      "schema": "orders",
+      "table": "orders",
+      "description": "Orders table with status and priority information"
+    },
+    {
+      "name": "line_items",
+      "type": "table",
+      "catalog": "main",
+      "schema": "orders",
+      "table": "line_items",
+      "description": "Line items detail table"
+    },
+    {
+      "name": "order_status",
+      "type": "table",
+      "catalog": "main",
+      "schema": "reference",
+      "table": "order_status",
+      "description": "Order status lookup table"
+    }
+  ],
+  "joins": [
+    {
+      "left_table": "orders",
+      "right_table": "line_items",
+      "left_key": "id",
+      "right_key": "order_id",
+      "join_type": "inner",
+      "description": "Join orders with line items (1:many)"
+    },
+    {
+      "left_table": "orders",
+      "right_table": "order_status",
+      "left_key": "status",
+      "right_key": "code",
+      "join_type": "left",
+      "description": "Join orders with status descriptions"
+    }
+  ],
+  "dimensions": [
+    {
+      "name": "order_date",
+      "type": "column",
+      "column": "order_date",
+      "description": "Date when the order was created",
+      "data_type": "date"
+    },
+    {
+      "name": "order_month",
+      "type": "custom",
+      "expression": "DATE_FORMAT(order_date, 'yyyy-MM')",
+      "description": "Order month for monthly trend analysis",
+      "data_type": "string"
+    },
+    {
+      "name": "order_status",
+      "type": "column",
+      "column": "status",
+      "description": "Current order status (Open, Processing, Fulfilled, Cancelled)",
+      "data_type": "string"
+    },
+    {
+      "name": "order_priority",
+      "type": "column",
+      "column": "priority",
+      "description": "Order priority level (High, Medium, Low)",
+      "data_type": "string"
+    },
+    {
+      "name": "shipping_method",
+      "type": "column",
+      "column": "shipping_method",
+      "description": "Shipping method selected",
+      "data_type": "string"
+    },
+    {
+      "name": "is_high_priority",
+      "type": "custom",
+      "expression": "CASE WHEN priority = 'High' THEN 1 ELSE 0 END",
+      "description": "Flag for high priority orders",
+      "data_type": "int"
+    }
+  ],
+  "measures": [
+    {
+      "name": "total_orders",
+      "expression": "COUNT(*)",
+      "description": "Total number of orders"
+    },
+    {
+      "name": "open_orders",
+      "expression": "COUNT(DISTINCT CASE WHEN status = 'Open' THEN id END)",
+      "description": "Number of open orders"
+    },
+    {
+      "name": "fulfilled_orders",
+      "expression": "COUNT(DISTINCT CASE WHEN status = 'Fulfilled' THEN id END)",
+      "description": "Number of fulfilled orders"
+    },
+    {
+      "name": "total_revenue",
+      "expression": "SUM(total_amount)",
+      "description": "Total revenue from all orders"
+    },
+    {
+      "name": "open_order_value",
+      "expression": "SUM(CASE WHEN status = 'Open' THEN total_amount ELSE 0 END)",
+      "description": "Total value of open orders (at risk)"
+    },
+    {
+      "name": "fulfillment_rate",
+      "expression": "COUNT(DISTINCT CASE WHEN status = 'Fulfilled' THEN id END) * 100.0 / COUNT(*)",
+      "description": "Percentage of orders that are fulfilled"
+    },
+    {
+      "name": "average_order_value",
+      "expression": "AVG(total_amount)",
+      "description": "Average order value"
+    }
+  ],
+  "primary_source": "orders"
+}

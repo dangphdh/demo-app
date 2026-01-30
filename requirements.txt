@@ -1,0 +1,22 @@
+# Core Streamlit
+streamlit>=1.40.0
+
+# Databricks Integration
+databricks-sdk>=0.40.0
+
+# Data Validation
+PyYAML>=6.0.0
+pydantic>=2.0.0
+
+# SQL Parsing and Validation
+sqlglot>=25.0.0
+
+# Data Manipulation
+pandas>=2.0.0
+
+# Optional: Enhanced Interactivity
+# streamlit-javascript>=0.1.5
+
+# Development Dependencies (optional)
+# pytest>=7.0.0
+# pytest-mock>=3.10.0

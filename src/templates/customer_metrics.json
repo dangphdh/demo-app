@@ -1,0 +1,145 @@
+{
+  "name": "customer_metrics",
+  "title": "Customer Metrics Template",
+  "description": "Understand customer behavior, value, and acquisition channels. Essential for customer analytics and marketing teams.",
+  "icon": "👥",
+  "use_case": "Analyze customer value, track acquisition channels, measure customer retention and engagement",
+  "catalog": "main",
+  "schema": "analytics",
+  "sources": [
+    {
+      "name": "customers",
+      "type": "table",
+      "catalog": "main",
+      "schema": "crm",
+      "table": "customers",
+      "description": "Customer master data"
+    },
+    {
+      "name": "orders",
+      "type": "table",
+      "catalog": "main",
+      "schema": "sales",
+      "table": "orders",
+      "description": "Customer orders"
+    },
+    {
+      "name": "web_sessions",
+      "type": "table",
+      "catalog": "main",
+      "schema": "web",
+      "table": "sessions",
+      "description": "Web session and activity data"
+    }
+  ],
+  "joins": [
+    {
+      "left_table": "customers",
+      "right_table": "orders",
+      "left_key": "id",
+      "right_key": "customer_id",
+      "join_type": "left",
+      "description": "Join customers with their orders (1:many)"
+    },
+    {
+      "left_table": "customers",
+      "right_table": "web_sessions",
+      "left_key": "id",
+      "right_key": "customer_id",
+      "join_type": "left",
+      "description": "Join customers with web sessions"
+    }
+  ],
+  "dimensions": [
+    {
+      "name": "customer_tier",
+      "type": "column",
+      "column": "tier",
+      "description": "Customer tier (Platinum, Gold, Silver, Bronze)",
+      "data_type": "string"
+    },
+    {
+      "name": "acquisition_channel",
+      "type": "column",
+      "column": "acquisition_channel",
+      "description": "Channel through which customer was acquired",
+      "data_type": "string"
+    },
+    {
+      "name": "geographic_region",
+      "type": "column",
+      "column": "region",
+      "description": "Customer geographic region",
+      "data_type": "string"
+    },
+    {
+      "name": "customer_segment",
+      "type": "custom",
+      "expression": "CASE WHEN total_lifetime_value > 10000 THEN 'High Value' WHEN total_lifetime_value > 5000 THEN 'Medium Value' ELSE 'Low Value' END",
+      "description": "Customer segment based on lifetime value",
+      "data_type": "string"
+    },
+    {
+      "name": "is_repeat_customer",
+      "type": "custom",
+      "expression": "CASE WHEN order_count > 1 THEN 1 ELSE 0 END",
+      "description": "Flag for repeat customers",
+      "data_type": "int"
+    },
+    {
+      "name": "tenure_months",
+      "type": "custom",
+      "expression": "DATEDIFF(MONTH, created_date, CURRENT_DATE)",
+      "description": "Customer tenure in months",
+      "data_type": "int"
+    }
+  ],
+  "measures": [
+    {
+      "name": "total_customers",
+      "expression": "COUNT(DISTINCT id)",
+      "description": "Total number of customers"
+    },
+    {
+      "name": "active_customers",
+      "expression": "COUNT(DISTINCT CASE WHEN last_order_date >= DATE_SUB(CURRENT_DATE, 90) THEN id END)",
+      "description": "Number of active customers (last 90 days)"
+    },
+    {
+      "name": "total_lifetime_value",
+      "expression": "SUM(order_total)",
+      "description": "Total customer lifetime value (all customers)"
+    },
+    {
+      "name": "average_lifetime_value",
+      "expression": "AVG(order_total)",
+      "description": "Average customer lifetime value"
+    },
+    {
+      "name": "repeat_purchase_rate",
+      "expression": "COUNT(DISTINCT CASE WHEN order_count > 1 THEN id END) * 100.0 / COUNT(DISTINCT id)",
+      "description": "Percentage of customers who made more than one purchase"
+    },
+    {
+      "name": "total_orders",
+      "expression": "SUM(order_count)",
+      "description": "Total orders across all customers"
+    },
+    {
+      "name": "orders_per_customer",
+      "expression": "SUM(order_count) / COUNT(DISTINCT id)",
+      "description": "Average number of orders per customer"
+    },
+    {
+      "name": "total_web_sessions",
+      "expression": "SUM(session_count)",
+      "description": "Total web sessions"
+    },
+    {
+      "name": "sessions_per_customer",
+      "expression": "SUM(session_count) / COUNT(DISTINCT id)",
+      "description": "Average web sessions per customer"
+    }
+  ],
+  "primary_source": "customers"
+}

@@ -1,0 +1,125 @@
+{
+  "name": "sales_revenue",
+  "title": "Sales Revenue Template",
+  "description": "Track sales performance across regions, products, and time periods. Ideal for sales dashboards and revenue reporting.",
+  "icon": "💰",
+  "use_case": "Monitor sales performance, track revenue trends, analyze sales by region and product category",
+  "catalog": "main",
+  "schema": "analytics",
+  "sources": [
+    {
+      "name": "orders",
+      "type": "table",
+      "catalog": "main",
+      "schema": "sales",
+      "table": "orders",
+      "description": "Orders table containing transaction data"
+    },
+    {
+      "name": "customers",
+      "type": "table",
+      "catalog": "main",
+      "schema": "sales",
+      "table": "customers",
+      "description": "Customer information table"
+    },
+    {
+      "name": "products",
+      "type": "table",
+      "catalog": "main",
+      "schema": "sales",
+      "table": "products",
+      "description": "Product catalog table"
+    }
+  ],
+  "joins": [
+    {
+      "left_table": "orders",
+      "right_table": "customers",
+      "left_key": "customer_id",
+      "right_key": "id",
+      "join_type": "inner",
+      "description": "Join orders with customer information"
+    },
+    {
+      "left_table": "orders",
+      "right_table": "products",
+      "left_key": "product_id",
+      "right_key": "id",
+      "join_type": "inner",
+      "description": "Join orders with product details"
+    }
+  ],
+  "dimensions": [
+    {
+      "name": "order_date",
+      "type": "column",
+      "column": "order_date",
+      "description": "Date when the order was placed",
+      "data_type": "date"
+    },
+    {
+      "name": "order_month",
+      "type": "custom",
+      "expression": "DATE_FORMAT(order_date, 'yyyy-MM')",
+      "description": "Order date formatted as year-month for monthly analysis",
+      "data_type": "string"
+    },
+    {
+      "name": "order_year",
+      "type": "custom",
+      "expression": "YEAR(order_date)",
+      "description": "Year extracted from order date",
+      "data_type": "int"
+    },
+    {
+      "name": "customer_region",
+      "type": "column",
+      "column": "region",
+      "description": "Customer geographic region",
+      "data_type": "string"
+    },
+    {
+      "name": "customer_segment",
+      "type": "column",
+      "column": "segment",
+      "description": "Customer segment (e.g., Enterprise, SMB, Consumer)",
+      "data_type": "string"
+    },
+    {
+      "name": "product_category",
+      "type": "column",
+      "column": "category",
+      "description": "Product category",
+      "data_type": "string"
+    }
+  ],
+  "measures": [
+    {
+      "name": "total_revenue",
+      "expression": "SUM(order_total)",
+      "description": "Total revenue from all orders"
+    },
+    {
+      "name": "order_count",
+      "expression": "COUNT(*)",
+      "description": "Total number of orders"
+    },
+    {
+      "name": "average_order_value",
+      "expression": "AVG(order_total)",
+      "description": "Average order value"
+    },
+    {
+      "name": "unique_customers",
+      "expression": "COUNT(DISTINCT customer_id)",
+      "description": "Number of unique customers"
+    },
+    {
+      "name": "revenue_per_customer",
+      "expression": "SUM(order_total) / COUNT(DISTINCT customer_id)",
+      "description": "Average revenue per customer"
+    }
+  ],
+  "primary_source": "orders"
+}
