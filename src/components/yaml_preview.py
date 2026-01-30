@@ -2,8 +2,8 @@
 
 import streamlit as st
 from typing import Optional
-from ..models import MetricView
-from ..services import YAMLGenerator
+from src.models import MetricView
+from src.services import YAMLGenerator
 
 
 class YAMLPreview:
@@ -82,7 +82,7 @@ class YAMLPreview:
         Args:
             metric_view: MetricView to validate
         """
-        from ..services import Validator
+        from src.services import Validator
 
         errors = Validator.validate_metric_view(metric_view)
 
@@ -217,7 +217,7 @@ class YAMLPreview:
         st.markdown("---")
 
         # Validation check
-        from ..services import Validator
+        from src.services import Validator
         errors = Validator.validate_metric_view(metric_view)
 
         if errors:

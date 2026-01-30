@@ -5,7 +5,7 @@ and complete metric views.
 """
 
 from typing import List, Tuple, Optional, Set
-from ..models import MetricView, Dimension, Measure, Join, Source
+from src.models import MetricView, Dimension, Measure, Join, Source
 
 
 class ValidationError:

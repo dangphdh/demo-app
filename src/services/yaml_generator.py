@@ -5,7 +5,7 @@ Converts Pydantic MetricView models into valid Databricks Metric View YAML.
 
 from typing import Dict, Any
 import yaml
-from ..models import MetricView, Dimension, Measure, Join, Source
+from src.models import MetricView, Dimension, Measure, Join, Source
 
 
 class YAMLGenerator:

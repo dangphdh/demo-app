@@ -5,7 +5,7 @@ Provides a tree-view interface to browse catalogs, schemas, and tables.
 
 import streamlit as st
 from typing import List, Dict, Any, Optional, Tuple
-from ..services import DatabricksClient
+from src.services import DatabricksClient
 
 
 class SchemaBrowser:

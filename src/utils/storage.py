@@ -5,7 +5,7 @@ import os
 from datetime import datetime
 from typing import List, Dict, Any, Optional
 import streamlit as st
-from ..models import MetricView
+from src.models import MetricView
 
 
 class MetricViewStorage:
@@ -173,7 +173,7 @@ class MetricViewStorage:
         Returns:
             YAML string
         """
-        from ..services import YAMLGenerator
+        from src.services import YAMLGenerator
         return YAMLGenerator.generate(metric_view)
 
     @staticmethod
@@ -191,12 +191,88 @@ class MetricViewStorage:
         try:
             data = yaml.safe_load(yaml_content)
 
+            # Transform Databricks YAML format to Pydantic model format
+            data = MetricViewStorage._convert_yaml_to_model_format(data)
+
             # Convert to MetricView
             return MetricView(**data)
 
         except Exception as e:
             st.error(f"Error importing YAML: {str(e)}")
             return None
+
+    @staticmethod
+    def _convert_yaml_to_model_format(data: Dict[str, Any]) -> Dict[str, Any]:
+        """Convert Databricks YAML format to Pydantic model format.
+
+        Args:
+            data: Raw YAML data dictionary
+
+        Returns:
+            Transformed data dictionary matching Pydantic model structure
+        """
+        # Convert sources from Databricks format to model format
+        if "sources" in data:
+            converted_sources = []
+            for source in data["sources"]:
+                converted_source = {"name": source["name"]}
+
+                # Determine type and extract fields
+                if "table" in source:
+                    converted_source["type"] = "table"
+                    table_data = source["table"]
+                    converted_source["catalog"] = table_data["catalog"]
+                    converted_source["schema"] = table_data["schema"]
+                    converted_source["table"] = table_data["name"]
+                elif "view" in source:
+                    converted_source["type"] = "view"
+                    view_data = source["view"]
+                    converted_source["catalog"] = view_data["catalog"]
+                    converted_source["schema"] = view_data["schema"]
+                    converted_source["table"] = view_data["name"]
+                elif "query" in source:
+                    converted_source["type"] = "query"
+                    query_data = source["query"]
+                    converted_source["catalog"] = query_data["catalog"]
+                    converted_source["schema"] = query_data["schema"]
+                    converted_source["query"] = query_data["query"]
+                else:
+                    # No type specified, default to table
+                    converted_source["type"] = "table"
+
+                converted_sources.append(converted_source)
+
+            data["sources"] = converted_sources
+
+        # Convert dimensions from Databricks format to model format
+        if "dimensions" in data:
+            converted_dimensions = []
+            for dimension in data["dimensions"]:
+                converted_dim = {"name": dimension["name"]}
+
+                # Determine type
+                if "expression" in dimension:
+                    converted_dim["type"] = "custom"
+                    converted_dim["expression"] = dimension["expression"]
+                elif "column" in dimension:
+                    converted_dim["type"] = "column"
+                    converted_dim["column"] = dimension["column"]
+                else:
+                    # Default to column type
+                    converted_dim["type"] = "column"
+
+                # Copy optional fields
+                if "description" in dimension:
+                    converted_dim["description"] = dimension["description"]
+                if "type" in dimension and isinstance(dimension["type"], str):
+                    # Data type field (not the dimension type)
+                    converted_dim["data_type"] = dimension["type"]
+
+                converted_dimensions.append(converted_dim)
+
+            data["dimensions"] = converted_dimensions
+
+        return data
 
 
 class SessionManager:

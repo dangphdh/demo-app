@@ -2,7 +2,7 @@
 
 import streamlit as st
 from typing import List, Dict, Any, Optional
-from ..models import Join
+from src.models import Join
 
 
 class JoinVisualizer:

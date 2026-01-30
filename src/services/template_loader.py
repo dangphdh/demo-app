@@ -3,7 +3,7 @@
 import json
 import os
 from typing import List, Dict, Any, Optional
-from ..models import MetricView, Source, Dimension, Measure, Join
+from src.models import MetricView, Source, Dimension, Measure, Join
 
 
 class Template:

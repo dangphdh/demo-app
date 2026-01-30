@@ -3,8 +3,10 @@
 import sys
 import os
 
-# Add src to path
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'src'))
+# Add project root and src to path
+project_root = os.path.join(os.path.dirname(__file__), '..')
+sys.path.insert(0, os.path.join(project_root, 'src'))
+sys.path.insert(0, project_root)
 
 def test_phase1_models():
     """Test Phase 1: Pydantic models."""
@@ -236,7 +238,8 @@ def test_phase2_validator():
     print("✅ Validation passes for valid metric view")
 
     # Test invalid metric view (missing name)
-    invalid_mv = MetricView(
+    # Use model_construct to bypass Pydantic validation for testing Validator logic
+    invalid_mv = MetricView.model_construct(
         name="",  # Invalid: empty name
         catalog="main",
         schema="analytics",
