@@ -163,11 +163,11 @@ def show_welcome_page():
 
     with col1:
         if st.button("✨ Create New", use_container_width=True, type="primary"):
-            st.switch_page("src/pages/1_wizard.py")
+            st.switch_page("pages/1_wizard.py")
 
     with col2:
         if st.button("📝 Load/Edit", use_container_width=True):
-            st.switch_page("src/pages/2_editor.py")
+            st.switch_page("pages/2_editor.py")
 
     with col3:
         if st.button("🎓 Tutorial", use_container_width=True):

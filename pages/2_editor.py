@@ -1,0 +1,286 @@
+"""Editor page - Edit saved metric views."""
+
+import streamlit as st
+from typing import Optional
+from src.components import YAMLPreview
+from src.services import TemplateLoader
+from src.utils import MetricViewStorage, SessionManager
+from src.models import MetricView
+
+st.set_page_config(
+    page_title="Editor - Metric View Builder",
+    page_icon="✏️",
+    layout="wide"
+)
+
+
+def init_editor_state():
+    """Initialize editor session state."""
+    if "current_metric_view" not in st.session_state:
+        st.session_state.current_metric_view = None
+
+    if "editor_mode" not in st.session_state:
+        st.session_state.editor_mode = "select"  # select, edit, preview
+
+
+def show_load_view():
+    """Show load view for selecting templates or saved views."""
+    st.markdown("### Load Metric View")
+
+    tab1, tab2 = st.tabs(["📋 Templates", "💾 Saved Views"])
+
+    with tab1:
+        st.markdown("#### Start from a Template")
+
+        selected_template = TemplateLoader.render_template_selector()
+
+        if selected_template:
+            template = TemplateLoader.get_template(selected_template)
+
+            if template and st.button("Load Template", type="primary"):
+                try:
+                    metric_view = template.to_metric_view()
+                    st.session_state.current_metric_view = metric_view
+                    st.session_state.editor_mode = "edit"
+                    st.success(f"✅ Loaded template: {template.title}")
+                    st.rerun()
+                except Exception as e:
+                    st.error(f"Error loading template: {str(e)}")
+
+    with tab2:
+        st.markdown("#### Load Saved View")
+
+        saved_views = MetricViewStorage.list_saved()
+
+        if not saved_views:
+            st.info("No saved metric views found")
+        else:
+            st.markdown(f"**{len(saved_views)} saved view(s)**")
+
+            for view in saved_views:
+                with st.expander(
+                    f"📄 {view['name']} - {view['catalog']}.{view['schema']}"
+                ):
+                    col1, col2 = st.columns([3, 1])
+
+                    with col1:
+                        st.text(f"**Filename:** {view['filename']}")
+                        if view['description']:
+                            st.caption(f"📝 {view['description']}")
+                        st.caption(f"🕒 Saved: {view['saved_at']}")
+                        st.caption(
+                            f"📊 {view['sources_count']} sources, "
+                            f"{view['dimensions_count']} dimensions, "
+                            f"{view['measures_count']} measures"
+                        )
+
+                    with col2:
+                        if st.button("✏️ Edit", key=f"edit_{view['filename']}"):
+                            metric_view = MetricViewStorage.load(view['filename'])
+                            if metric_view:
+                                st.session_state.current_metric_view = metric_view
+                                st.session_state.editor_mode = "edit"
+                                st.success(f"✅ Loaded: {view['name']}")
+                                st.rerun()
+
+                        if st.button("🗑️", key=f"delete_{view['filename']}"):
+                            if MetricViewStorage.delete(view['filename']):
+                                st.success("Deleted!")
+                                st.rerun()
+
+
+def show_edit_view():
+    """Show edit view for current metric view."""
+    metric_view = st.session_state.current_metric_view
+
+    if not metric_view:
+        st.warning("No metric view loaded")
+        st.session_state.editor_mode = "select"
+        st.rerun()
+        return
+
+    st.markdown(f"### Editing: {metric_view.name}")
+
+    col1, col2 = st.columns([2, 1])
+
+    with col1:
+        st.markdown("#### Properties")
+
+        # Name
+        name = st.text_input("Name", value=metric_view.name)
+
+        # Catalog and Schema
+        col1a, col2a = st.columns(2)
+
+        with col1a:
+            catalog = st.text_input("Catalog", value=metric_view.catalog)
+
+        with col2a:
+            schema = st.text_input("Schema", value=metric_view.schema)
+
+        # Description
+        description = st.text_area(
+            "Description",
+            value=metric_view.description,
+            height=100
+        )
+
+        # Save button
+        col1b, col2b = st.columns(2)
+
+        with col1b:
+            if st.button("💾 Save Changes", type="primary", use_container_width=True):
+                # Update metric view
+                metric_view.name = name
+                metric_view.catalog = catalog
+                metric_view.schema = schema
+                metric_view.description = description
+
+                # Save to storage
+                filepath = MetricViewStorage.save(metric_view)
+                st.success(f"✅ Saved: {filepath}")
+
+                # Autosave
+                SessionManager.autosave(metric_view)
+
+        with col2b:
+            if st.button("📥 Download YAML", use_container_width=True):
+                yaml_content = MetricViewStorage.export_yaml(metric_view)
+                st.download_button(
+                    "Download File",
+                    yaml_content,
+                    file_name=f"{metric_view.name}.yaml",
+                    mime="text/yaml"
+                )
+
+    with col2:
+        st.markdown("#### Quick Stats")
+
+        st.info(f"📊 **Sources:** {len(metric_view.sources)}")
+        st.info(f"📏 **Dimensions:** {len(metric_view.dimensions)}")
+        st.info(f"📈 **Measures:** {len(metric_view.measures)}")
+        st.info(f"🔗 **Joins:** {len(metric_view.joins)}")
+
+        st.markdown("---")
+
+        if st.button("🔙 Back to Load", use_container_width=True):
+            st.session_state.editor_mode = "select"
+            st.rerun()
+
+        if st.button("👁️ Preview YAML", use_container_width=True):
+            st.session_state.editor_mode = "preview"
+            st.rerun()
+
+    st.markdown("---")
+
+    # Show detailed sections
+    st.markdown("#### Components")
+
+    tab1, tab2, tab3, tab4 = st.tabs(["Sources", "Dimensions", "Measures", "Joins"])
+
+    with tab1:
+        for source in metric_view.sources:
+            st.markdown(f"**{source.name}**")
+            st.code(f"{source.get_full_name()}", language="sql")
+
+    with tab2:
+        for dim in metric_view.dimensions:
+            st.markdown(f"**{dim.name}** ({dim.type})")
+            if dim.type == "column":
+                st.code(f"Column: {dim.column}", language="sql")
+            else:
+                st.code(dim.expression, language="sql")
+            if dim.description:
+                st.caption(dim.description)
+
+    with tab3:
+        for measure in metric_view.measures:
+            st.markdown(f"**{measure.name}**")
+            st.code(measure.expression, language="sql")
+            if measure.description:
+                st.caption(measure.description)
+
+    with tab4:
+        if metric_view.joins:
+            for join in metric_view.joins:
+                st.markdown(
+                    f"**{join.left_table}**.{join.left_key} "
+                    f"←[{join.join_type.upper()}]→ "
+                    f"**{join.right_table}**.{join.right_key}"
+                )
+        else:
+            st.info("No joins configured")
+
+
+def show_preview_view():
+    """Show YAML preview view."""
+    metric_view = st.session_state.current_metric_view
+
+    if not metric_view:
+        st.warning("No metric view loaded")
+        st.session_state.editor_mode = "select"
+        st.rerun()
+        return
+
+    st.markdown(f"### Preview: {metric_view.name}")
+
+    # Show summary
+    YAMLPreview.render_summary(metric_view)
+
+    st.markdown("---")
+
+    # Show YAML
+    YAMLPreview.render(metric_view, show_download=True)
+
+    st.markdown("---")
+
+    col1, col2 = st.columns(2)
+
+    with col1:
+        if st.button("✏️ Continue Editing", use_container_width=True):
+            st.session_state.editor_mode = "edit"
+            st.rerun()
+
+    with col2:
+        if st.button("💾 Save", use_container_width=True):
+            filepath = MetricViewStorage.save(metric_view)
+            st.success(f"✅ Saved: {filepath}")
+
+
+def main():
+    """Main editor page."""
+    init_editor_state()
+
+    st.title("✏️ Metric View Editor")
+
+    # Check for autosave
+    SessionManager.render_autosave_banner()
+
+    # Route based on mode
+    if st.session_state.editor_mode == "select":
+        show_load_view()
+    elif st.session_state.editor_mode == "edit":
+        show_edit_view()
+    elif st.session_state.editor_mode == "preview":
+        show_preview_view()
+
+    # Navigation
+    st.markdown("---")
+
+    col1, col2, col3 = st.columns(3)
+
+    with col1:
+        if st.button("🏠 Welcome", use_container_width=True):
+            st.switch_page("pages/0_welcome.py")
+
+    with col2:
+        if st.button("✨ Wizard", use_container_width=True):
+            st.switch_page("pages/1_wizard.py")
+
+    with col3:
+        if st.button("🚀 Deploy", use_container_width=True):
+            st.switch_page("pages/3_deploy.py")
+
+
+if __name__ == "__main__":
+    main()
