@@ -8,7 +8,7 @@ from src.utils import MetricViewStorage, SessionManager
 from src.models import MetricView
 
 # Inject custom theme
-from src.ui import inject_theme, page_header, card
+from src.ui import inject_theme, page_header
 inject_theme()
 
 st.set_page_config(
@@ -83,7 +83,7 @@ def show_load_view():
                         )
 
                     with col2:
-                        if st.button("✏️ Edit", key=f"edit_{view['filename']}"):
+                        if st.button("Edit", key=f"edit_{view['filename']}"):
                             metric_view = MetricViewStorage.load(view['filename'])
                             if metric_view:
                                 st.session_state.current_metric_view = metric_view
@@ -91,7 +91,7 @@ def show_load_view():
                                 st.success(f"✅ Loaded: {view['name']}")
                                 st.rerun()
 
-                        if st.button("🗑️", key=f"delete_{view['filename']}"):
+                        if st.button("Delete", key=f"delete_{view['filename']}"):
                             if MetricViewStorage.delete(view['filename']):
                                 st.success("Deleted!")
                                 st.rerun()
@@ -171,11 +171,11 @@ def show_edit_view():
 
         st.markdown("---")
 
-        if st.button("🔙 Back to Load", use_container_width=True):
+        if st.button("Back to Load", use_container_width=True):
             st.session_state.editor_mode = "select"
             st.rerun()
 
-        if st.button("👁️ Preview YAML", use_container_width=True):
+        if st.button("Preview YAML", use_container_width=True):
             st.session_state.editor_mode = "preview"
             st.rerun()
 
@@ -281,15 +281,15 @@ def main():
     col1, col2, col3 = st.columns(3)
 
     with col1:
-        if st.button("🏠 Welcome", use_container_width=True):
+        if st.button("Welcome", use_container_width=True):
             st.switch_page("pages/0_welcome.py")
 
     with col2:
-        if st.button("✨ Wizard", use_container_width=True):
+        if st.button("Wizard", use_container_width=True):
             st.switch_page("pages/1_wizard.py")
 
     with col3:
-        if st.button("🚀 Deploy", use_container_width=True):
+        if st.button("Deploy", use_container_width=True):
             st.switch_page("pages/3_deploy.py")
 
 

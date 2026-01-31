@@ -137,14 +137,14 @@ class YAMLPreview:
         try:
             yaml_content = YAMLGenerator.generate(metric_view)
 
-            with st.expander("📄 View Generated YAML", expanded=False):
+            with st.expander("View Generated YAML", expanded=False):
                 st.code(yaml_content, language="yaml", line_numbers=True)
 
                 col1, col2 = st.columns(2)
 
                 with col1:
                     st.download_button(
-                        label="📥 Download",
+                        label="Download",
                         data=yaml_content,
                         file_name=f"{metric_view.name}_metric_view.yaml",
                         mime="text/yaml",
@@ -153,7 +153,7 @@ class YAMLPreview:
                     )
 
                 with col2:
-                    if st.button("📋 Copy", key=f"{key}_copy"):
+                    if st.button("Copy", key=f"{key}_copy"):
                         st.clipboard_copy(yaml_content)
                         st.success("Copied!")
 
