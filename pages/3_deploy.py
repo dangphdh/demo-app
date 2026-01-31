@@ -7,6 +7,10 @@ from src.services import DatabricksClient, YAMLGenerator
 from src.utils import MetricViewStorage
 from src.models import MetricView
 
+# Inject custom theme
+from src.ui import inject_theme, page_header, status_badge, card
+inject_theme()
+
 st.set_page_config(
     page_title="Deploy - Metric View Builder",
     page_icon="🚀",
@@ -165,7 +169,10 @@ def render_deploy_section():
                 )
 
                 if success:
-                    st.session_state.deploy_status = "success"
+                    st.session_state.deploy_status = {
+                        'status': 'success',
+                        'message': result_msg
+                    }
                     st.success(result_msg)
 
                     # Show additional info
@@ -181,7 +188,10 @@ def render_deploy_section():
                     4. Start querying it with your BI tools!
                     """)
                 else:
-                    st.session_state.deploy_status = "error"
+                    st.session_state.deploy_status = {
+                        'status': 'error',
+                        'message': f'Deployment failed: {error}'
+                    }
                     st.error(f"❌ Deployment failed: {error}")
 
     with col2:
@@ -302,7 +312,10 @@ def main():
     """Main deploy page."""
     init_deploy_state()
 
-    st.title("🚀 Deploy Metric View")
+    page_header(
+        "Deploy Metric View",
+        "Deploy your metric view to Databricks or export configuration"
+    )
 
     # Check authentication
     if not st.session_state.get("user_authenticated"):
@@ -321,6 +334,15 @@ def main():
         render_preview_section()
         st.markdown("---")
         render_deploy_section()
+
+        # Show deployment status
+        if st.session_state.get('deploy_status'):
+            status_data = st.session_state.deploy_status
+            status_badge(
+                status_data.get('status', 'pending'),
+                status_data.get('message', 'Deploying...')
+            )
+
         st.markdown("---")
         render_export_section()
 
