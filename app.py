@@ -104,7 +104,7 @@ def show_sidebar():
 
 def show_welcome_page():
     """Display welcome page."""
-    from src.ui import page_header, status_badge, COLORS, Typography
+    from src.ui import page_header, status_badge, COLORS, SPACING, Typography
 
     page_header(
         "Databricks Metric View Builder",
