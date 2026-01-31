@@ -17,4 +17,4 @@ This is the welcome page. In Phase 3, this will feature:
 """)
 
 if st.button("Go to Wizard", use_container_width=True, type="primary"):
-    st.switch_page("1_wizard.py")
+    st.switch_page("pages/1_wizard.py")
