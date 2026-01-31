@@ -9,9 +9,13 @@ from src.services import DatabricksClient, TemplateLoader
 from src.utils import SessionManager, MetricViewStorage
 from src.models import MetricView, Source, Dimension, Measure, Join
 
+# Inject custom theme
+from src.ui import inject_theme, page_header, COLORS, SPACING
+inject_theme()
+
 st.set_page_config(
     page_title="Wizard - Metric View Builder",
-    page_icon="✨",
+    page_icon="⚡",
     layout="wide"
 )
 
@@ -48,32 +52,36 @@ def init_wizard_state():
 
 def render_header():
     """Render wizard header."""
-    st.title("✨ Create Metric View - Wizard")
-    st.markdown("Follow the steps to create your Databricks Metric View.")
+    page_header(
+        "Create Metric View",
+        "Follow the steps to configure your metric view"
+    )
 
     # Progress indicator
     steps = [
-        "1️⃣ Connect",
-        "2️⃣ Sources",
-        "3️⃣ Joins",
-        "4️⃣ Dimensions",
-        "5️⃣ Measures",
-        "6️⃣ Review"
+        "Connect",
+        "Sources",
+        "Joins",
+        "Dimensions",
+        "Measures",
+        "Review"
     ]
 
     current_step = st.session_state.wizard_step - 1
+    total_steps = len(steps)
 
     # Progress bar
-    progress = current_step / (len(steps) - 1)
+    st.markdown(f"<p style='margin-bottom: {SPACING['xs']};'><strong>Step {current_step + 1} of {total_steps}:</strong> {steps[current_step]}</p>", unsafe_allow_html=True)
+    progress = current_step / (total_steps - 1)
     st.progress(progress)
 
     # Step indicators
     cols = st.columns(len(steps))
     for i, (col, step) in enumerate(zip(cols, steps)):
         if i <= current_step:
-            col.markdown(f"**{step}**")
+            col.markdown(f"**{i+1}. {step}**")
         else:
-            col.markdown(f"{step}")
+            col.markdown(f"{i+1}. {step}")
 
 
 def render_navigation():
@@ -84,18 +92,18 @@ def render_navigation():
 
     with col1:
         if st.session_state.wizard_step > 1:
-            if st.button("⬅️ Previous", use_container_width=True):
+            if st.button("Previous", use_container_width=True):
                 st.session_state.wizard_step -= 1
                 st.rerun()
 
     with col2:
         if st.session_state.wizard_step < 6:
-            if st.button("Next ➡️", use_container_width=True, type="primary"):
+            if st.button("Next", use_container_width=True, type="primary"):
                 st.session_state.wizard_step += 1
                 st.rerun()
 
     with col3:
-        if st.button("🏠 Back to Welcome", use_container_width=True):
+        if st.button("Back to Welcome", use_container_width=True):
             st.switch_page("pages/0_welcome.py")
 
 
@@ -104,16 +112,16 @@ def step_1_connect():
     st.markdown("### Step 1: Connect to Databricks")
 
     if not st.session_state.get("user_authenticated"):
-        st.warning("⚠️ Please connect to Databricks from the sidebar first")
-        st.info("👈 Use the sidebar to connect using service account or user credentials")
+        st.warning("Please connect to Databricks from the sidebar first")
+        st.info("Use the sidebar to connect using service account or user credentials")
         return False
 
-    st.success("✅ Connected to Databricks!")
+    st.success("Connected to Databricks!")
 
     # Show connection info
     config = st.session_state.databricks_config
-    st.info(f"🔗 Host: `{config.host}`")
-    st.info(f"🔑 Auth: `{config.auth_method}`")
+    st.info(f"Host: `{config.host}`")
+    st.info(f"Auth: `{config.auth_method}`")
 
     return True
 
@@ -127,7 +135,7 @@ def step_2_sources(client: DatabricksClient):
 
     if selected_tables:
         st.session_state.wizard_sources = selected_tables
-        st.success(f"✅ Selected {len(selected_tables)} table(s)")
+        st.success(f"Selected {len(selected_tables)} table(s)")
 
         # Show selected tables
         for catalog, schema, table in selected_tables:
@@ -135,7 +143,7 @@ def step_2_sources(client: DatabricksClient):
 
         return len(selected_tables) > 0
     else:
-        st.info("👆 Select one or more tables from the catalog browser above")
+        st.info("Select one or more tables from the catalog browser above")
         return False
 
 
@@ -144,11 +152,11 @@ def step_3_joins():
     st.markdown("### Step 3: Configure Joins")
 
     if len(st.session_state.wizard_sources) < 2:
-        st.info("ℹ️ Only one table selected - joins not needed")
+        st.info("Only one table selected - joins not needed")
         st.session_state.wizard_joins = []
         return True
 
-    st.info("🔗 Configure how your tables relate to each other")
+    st.info("Configure how your tables relate to each other")
 
     # Convert sources to dict format for join visualizer
     sources = [
@@ -192,7 +200,7 @@ def step_4_dimensions(client: DatabricksClient):
         st.session_state.wizard_dimensions = dimensions
 
         if dimensions:
-            st.success(f"✅ Defined {len(dimensions)} dimension(s)")
+            st.success(f"Defined {len(dimensions)} dimension(s)")
 
         return len(dimensions) > 0
 
@@ -219,7 +227,7 @@ def step_5_measures():
     st.session_state.wizard_measures = measures
 
     if measures:
-        st.success(f"✅ Defined {len(measures)} measure(s)")
+        st.success(f"Defined {len(measures)} measure(s)")
 
     return len(measures) > 0
 
@@ -271,7 +279,7 @@ def step_6_review():
         st.session_state.wizard_description = description
 
         # Build metric view
-        if st.button("🔄 Generate Preview", use_container_width=True):
+        if st.button("Generate Preview", use_container_width=True):
             st.session_state.generate_preview = True
 
         if st.session_state.get("generate_preview", False):
@@ -282,11 +290,17 @@ def step_6_review():
                     YAMLPreview.render_summary(metric_view)
 
                 st.markdown("---")
-                YAMLPreview.render(metric_view, show_download=True)
+
+                # YAML Preview
+                with st.container():
+                    st.markdown(f"<div class='tech-card-header'>Live YAML Preview</div>", unsafe_allow_html=True)
+                    st.markdown(f"<div class='tech-code-preview'>", unsafe_allow_html=True)
+                    YAMLPreview.render(metric_view, show_download=True)
+                    st.markdown("</div>", unsafe_allow_html=True)
 
                 # Deploy button (placeholder for Phase 4)
-                if st.button("🚀 Deploy to Databricks", type="primary"):
-                    st.info("🚀 Deployment coming in Phase 4!")
+                if st.button("Deploy to Databricks", type="primary"):
+                    st.info("Deployment coming in Phase 4!")
 
                 return True
 
@@ -301,15 +315,15 @@ def build_metric_view() -> Optional[MetricView]:
     """
     # Validate required fields
     if not st.session_state.wizard_name:
-        st.error("❌ Metric View name is required")
+        st.error("Metric View name is required")
         return None
 
     if not st.session_state.wizard_sources:
-        st.error("❌ At least one source is required")
+        st.error("At least one source is required")
         return None
 
     if not st.session_state.wizard_measures:
-        st.error("❌ At least one measure is required")
+        st.error("At least one measure is required")
         return None
 
     # Build sources
@@ -340,7 +354,7 @@ def build_metric_view() -> Optional[MetricView]:
         return metric_view
 
     except Exception as e:
-        st.error(f"❌ Error building metric view: {str(e)}")
+        st.error(f"Error building metric view: {str(e)}")
         return None
 
 
@@ -401,7 +415,7 @@ def main():
         if client:
             step_valid = step_2_sources(client)
         else:
-            st.error("❌ Please connect to Databricks first")
+            st.error("Please connect to Databricks first")
 
     elif st.session_state.wizard_step == 3:
         step_valid = step_3_joins()
@@ -410,7 +424,7 @@ def main():
         if client:
             step_valid = step_4_dimensions(client)
         else:
-            st.error("❌ Please connect to Databricks first")
+            st.error("Please connect to Databricks first")
 
     elif st.session_state.wizard_step == 5:
         step_valid = step_5_measures()
