@@ -7,6 +7,10 @@ from src.services import TemplateLoader
 from src.utils import MetricViewStorage, SessionManager
 from src.models import MetricView
 
+# Inject custom theme
+from src.ui import inject_theme, page_header
+inject_theme()
+
 st.set_page_config(
     page_title="Editor - Metric View Builder",
     page_icon="✏️",
@@ -30,9 +34,13 @@ def show_load_view():
     tab1, tab2 = st.tabs(["📋 Templates", "💾 Saved Views"])
 
     with tab1:
-        st.markdown("#### Start from a Template")
+        # Template selection
+        st.markdown(f"<div class='tech-card-header'>Choose Template</div>", unsafe_allow_html=True)
+        st.markdown(f"<div class='tech-card'>", unsafe_allow_html=True)
 
         selected_template = TemplateLoader.render_template_selector()
+
+        st.markdown("</div>", unsafe_allow_html=True)
 
         if selected_template:
             template = TemplateLoader.get_template(selected_template)
@@ -75,7 +83,7 @@ def show_load_view():
                         )
 
                     with col2:
-                        if st.button("✏️ Edit", key=f"edit_{view['filename']}"):
+                        if st.button("Edit", key=f"edit_{view['filename']}"):
                             metric_view = MetricViewStorage.load(view['filename'])
                             if metric_view:
                                 st.session_state.current_metric_view = metric_view
@@ -83,7 +91,7 @@ def show_load_view():
                                 st.success(f"✅ Loaded: {view['name']}")
                                 st.rerun()
 
-                        if st.button("🗑️", key=f"delete_{view['filename']}"):
+                        if st.button("Delete", key=f"delete_{view['filename']}"):
                             if MetricViewStorage.delete(view['filename']):
                                 st.success("Deleted!")
                                 st.rerun()
@@ -129,7 +137,7 @@ def show_edit_view():
         col1b, col2b = st.columns(2)
 
         with col1b:
-            if st.button("💾 Save Changes", type="primary", use_container_width=True):
+            if st.button("Save Changes", type="primary", use_container_width=True):
                 # Update metric view
                 metric_view.name = name
                 metric_view.catalog = catalog
@@ -144,7 +152,7 @@ def show_edit_view():
                 SessionManager.autosave(metric_view)
 
         with col2b:
-            if st.button("📥 Download YAML", use_container_width=True):
+            if st.button("Download YAML", use_container_width=True):
                 yaml_content = MetricViewStorage.export_yaml(metric_view)
                 st.download_button(
                     "Download File",
@@ -163,11 +171,11 @@ def show_edit_view():
 
         st.markdown("---")
 
-        if st.button("🔙 Back to Load", use_container_width=True):
+        if st.button("Back to Load", use_container_width=True):
             st.session_state.editor_mode = "select"
             st.rerun()
 
-        if st.button("👁️ Preview YAML", use_container_width=True):
+        if st.button("Preview YAML", use_container_width=True):
             st.session_state.editor_mode = "preview"
             st.rerun()
 
@@ -237,12 +245,12 @@ def show_preview_view():
     col1, col2 = st.columns(2)
 
     with col1:
-        if st.button("✏️ Continue Editing", use_container_width=True):
+        if st.button("Continue Editing", use_container_width=True):
             st.session_state.editor_mode = "edit"
             st.rerun()
 
     with col2:
-        if st.button("💾 Save", use_container_width=True):
+        if st.button("Save", use_container_width=True):
             filepath = MetricViewStorage.save(metric_view)
             st.success(f"✅ Saved: {filepath}")
 
@@ -251,7 +259,10 @@ def main():
     """Main editor page."""
     init_editor_state()
 
-    st.title("✏️ Metric View Editor")
+    page_header(
+        "Load & Edit Metric View",
+        "Select a saved metric view to edit"
+    )
 
     # Check for autosave
     SessionManager.render_autosave_banner()
@@ -270,15 +281,15 @@ def main():
     col1, col2, col3 = st.columns(3)
 
     with col1:
-        if st.button("🏠 Welcome", use_container_width=True):
+        if st.button("Welcome", use_container_width=True):
             st.switch_page("pages/0_welcome.py")
 
     with col2:
-        if st.button("✨ Wizard", use_container_width=True):
+        if st.button("Wizard", use_container_width=True):
             st.switch_page("pages/1_wizard.py")
 
     with col3:
-        if st.button("🚀 Deploy", use_container_width=True):
+        if st.button("Deploy", use_container_width=True):
             st.switch_page("pages/3_deploy.py")
 
 
