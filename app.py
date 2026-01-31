@@ -11,29 +11,14 @@ from src.utils import show_tutorial_if_active
 # Configure Streamlit page
 st.set_page_config(
     page_title="Metric View Builder",
-    page_icon="📊",
+    page_icon="",
     layout="wide",
     initial_sidebar_state="expanded"
 )
 
-# Custom CSS for better styling
-st.markdown("""
-<style>
-    .main-header {
-        font-size: 2.5rem;
-        font-weight: 700;
-        color: #1f77b4;
-        margin-bottom: 1rem;
-    }
-    .info-box {
-        background-color: #f0f8ff;
-        padding: 1rem;
-        border-radius: 0.5rem;
-        border-left: 4px solid #1f77b4;
-        margin: 1rem 0;
-    }
-</style>
-""", unsafe_allow_html=True)
+# Import and inject custom theme
+from src.ui import inject_theme, COLORS
+inject_theme()
 
 
 def init_session_state():
@@ -50,24 +35,28 @@ def init_session_state():
 
 def show_sidebar():
     """Display sidebar with navigation and connection status."""
-    st.sidebar.title("📊 Metric View Builder")
+    from src.ui import connection_status_card
+
+    st.sidebar.markdown('<p class="sidebar-title">Metric View Builder</p>', unsafe_allow_html=True)
     st.sidebar.markdown("---")
 
     # Connection status
-    st.sidebar.subheader("Connection Status")
+    st.sidebar.markdown("#### Connection Status")
 
     if st.session_state.user_authenticated and st.session_state.databricks_config:
         config = st.session_state.databricks_config
-        st.sidebar.success("✓ Connected")
-        st.sidebar.info(f"**Host:** {config.host}")
-        st.sidebar.info(f"**Auth:** {config.auth_method}")
+        connection_status_card(
+            is_connected=True,
+            host=config.host,
+            auth_method=config.auth_method
+        )
 
         if st.sidebar.button("Disconnect", key="disconnect_btn"):
             st.session_state.user_authenticated = False
             st.session_state.databricks_config = None
             st.rerun()
     else:
-        st.sidebar.warning("⚠ Not Connected")
+        connection_status_card(is_connected=False)
 
         # Show connection form
         st.sidebar.markdown("#### Connect to Databricks")
@@ -82,7 +71,7 @@ def show_sidebar():
                 st.session_state.user_authenticated = True
                 st.rerun()
 
-        st.sidebar.markdown("**Or use user credentials:**")
+        st.sidebar.markdown("**User Credentials**")
 
         host = st.sidebar.text_input("Host URL", placeholder="https://...")
         token = st.sidebar.text_input("Access Token", type="password")
@@ -115,8 +104,22 @@ def show_sidebar():
 
 def show_welcome_page():
     """Display welcome page."""
-    st.markdown('<h1 class="main-header">Welcome to Metric View Builder</h1>', unsafe_allow_html=True)
+    from src.ui import page_header, status_badge, COLORS, Typography
 
+    page_header(
+        "Databricks Metric View Builder",
+        "Create metric views without writing YAML or SQL"
+    )
+
+    # Connection status banner
+    if st.session_state.user_authenticated:
+        status_badge('success', 'Connected to Databricks')
+    else:
+        status_badge('warning', 'Not connected to Databricks')
+
+    st.markdown("<br>", unsafe_allow_html=True)
+
+    # Metric View explanation
     st.markdown("""
     <div class="info-box">
         <h3>What is a Metric View?</h3>
@@ -134,7 +137,7 @@ def show_welcome_page():
 
     with col1:
         st.markdown("""
-        **📹 Visual Builder**
+        **Visual Builder**
 
         Create metric views without writing YAML or SQL.
         Use our intuitive wizard to define dimensions and measures.
@@ -142,7 +145,7 @@ def show_welcome_page():
 
     with col2:
         st.markdown("""
-        **🔗 Smart Joins**
+        **Smart Joins**
 
         Connect multiple tables with our visual join interface.
         Support for complex star and snowflake schemas.
@@ -150,7 +153,7 @@ def show_welcome_page():
 
     with col3:
         st.markdown("""
-        **🚀 One-Click Deploy**
+        **One-Click Deploy**
 
         Generate YAML or deploy directly to Databricks.
         Support for both service accounts and user credentials.
@@ -162,15 +165,15 @@ def show_welcome_page():
     col1, col2, col3 = st.columns(3)
 
     with col1:
-        if st.button("✨ Create New", use_container_width=True, type="primary"):
+        if st.button("Create New", use_container_width=True, type="primary"):
             st.switch_page("pages/1_wizard.py")
 
     with col2:
-        if st.button("📝 Load/Edit", use_container_width=True):
+        if st.button("Load/Edit", use_container_width=True):
             st.switch_page("pages/2_editor.py")
 
     with col3:
-        if st.button("🎓 Tutorial", use_container_width=True):
+        if st.button("Tutorial", use_container_width=True):
             st.session_state.show_tutorial = True
             st.rerun()
 
@@ -180,12 +183,19 @@ def show_welcome_page():
     st.markdown("""
     **Pre-built Templates Available:**
 
-    - 💰 **Sales Revenue** - Track sales performance across regions, products, and time
-    - 📦 **Order Analytics** - Monitor order pipeline and fulfillment metrics
-    - 👥 **Customer Metrics** - Understand customer value and behavior
+    - **Sales Revenue** - Track sales performance across regions, products, and time
+    - **Order Analytics** - Monitor order pipeline and fulfillment metrics
+    - **Customer Metrics** - Understand customer value and behavior
 
-    👉 Go to **Load/Edit** to start with a template!
+    Go to **Load/Edit** to start with a template!
     """)
+
+    # Footer
+    st.markdown(f"""
+    <div style='text-align: center; color: {COLORS['text_muted']}; font-size: {Typography.XSMALL}; margin-top: 48px;'>
+        v1.0.0 | Production Ready
+    </div>
+    """, unsafe_allow_html=True)
 
 
 def main():
