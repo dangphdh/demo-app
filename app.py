@@ -120,8 +120,8 @@ def show_welcome_page():
     st.markdown("<br>", unsafe_allow_html=True)
 
     # Metric View explanation
-    st.markdown("""
-    <div class="info-box">
+    st.markdown(f"""
+    <div style="background: {COLORS['background_secondary']}; padding: {SPACING['md']}; border-radius: 6px; border-left: 4px solid {COLORS['primary']}; margin: {SPACING['md']} 0;">
         <h3>What is a Metric View?</h3>
         <p>
         A <strong>Metric View</strong> is a centralized way to define and manage consistent,
