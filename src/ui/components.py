@@ -28,6 +28,10 @@ def card(title=None, content=None, border_color=None):
         <div class="tech-card" style="{border}"></div>
         """, unsafe_allow_html=True)
 
+    # Render content if provided
+    if content:
+        st.write(content)
+
 
 def status_badge(status, text):
     """Render a status indicator badge.
@@ -113,9 +117,11 @@ def action_card(title, description, button_label, button_type="primary", on_clic
     </div>
     """, unsafe_allow_html=True)
 
-    if button_type == "primary":
-        if st.button(button_label, key=key, use_container_width=True, type="primary", on_click=on_click):
-            pass
-    else:
-        if st.button(button_label, key=key, use_container_width=True, on_click=on_click):
-            pass
+    # Single button call - on_click handles callback, no if-statements needed
+    st.button(
+        button_label,
+        key=key,
+        use_container_width=True,
+        type="primary" if button_type == "primary" else None,
+        on_click=on_click
+    )
