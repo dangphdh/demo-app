@@ -2,24 +2,16 @@
 
 from .theme import (
     get_custom_css,
+    inject_theme,
     COLORS,
     SPACING,
     Typography
 )
-from .components import (
-    card,
-    status_badge,
-    primary_button,
-    secondary_button
-)
 
 __all__ = [
     'get_custom_css',
+    'inject_theme',
     'COLORS',
     'SPACING',
     'Typography',
-    'card',
-    'status_badge',
-    'primary_button',
-    'secondary_button',
 ]
