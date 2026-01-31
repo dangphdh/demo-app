@@ -69,7 +69,7 @@ class YAMLPreview:
                         st.success("✅ Copied to clipboard!")
 
             # Show validation button
-            if st.button("✅ Validate YAML", key=f"{key}_validate"):
+            if st.button("Validate YAML", key=f"{key}_validate"):
                 with st.spinner("Validating..."):
                     YAMLPreview._show_validation(metric_view)
 
