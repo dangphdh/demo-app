@@ -39,25 +39,38 @@ class YAMLGenerator:
     def _build_yaml_dict(metric_view: MetricView) -> Dict[str, Any]:
         """Build dictionary representation of the metric view.
 
+        Uses simplified format:
+        - version: 1.1
+        - source: catalog.schema.table (single source)
+        - dimensions use 'expr' and 'comment'
+        - measures use 'expr'
+
         Args:
             metric_view: MetricView model instance
 
         Returns:
             Dictionary structure for YAML generation
         """
+        # Get the primary source (first source for single-table mode)
+        primary_source = None
+        if metric_view.sources:
+            for source in metric_view.sources:
+                if source.name == metric_view.primary_source:
+                    primary_source = source
+                    break
+            # Fallback to first source if primary_source not found
+            if not primary_source:
+                primary_source = metric_view.sources[0]
+
+        # Build source path: catalog.schema.table
+        source_path = ""
+        if primary_source:
+            source_path = f"{primary_source.catalog}.{primary_source.schema}.{primary_source.table}"
+
         yaml_dict = {
-            "version": 1,
-            "name": metric_view.name,
-            "catalog": metric_view.catalog,
-            "schema": metric_view.schema,
-            "description": metric_view.description,
+            "version": 1.1,
+            "source": source_path,
         }
-
-        # Add primary source
-        yaml_dict["primary_source"] = metric_view.primary_source
-
-        # Add sources
-        yaml_dict["sources"] = YAMLGenerator._build_sources(metric_view.sources)
 
         # Add dimensions
         if metric_view.dimensions:
@@ -67,10 +80,6 @@ class YAMLGenerator:
 
         # Add measures
         yaml_dict["measures"] = YAMLGenerator._build_measures(metric_view.measures)
-
-        # Add joins if present
-        if metric_view.joins:
-            yaml_dict["joins"] = YAMLGenerator._build_joins(metric_view.joins)
 
         return yaml_dict
 
@@ -118,6 +127,8 @@ class YAMLGenerator:
     def _build_dimensions(dimensions: list[Dimension]) -> list[Dict[str, Any]]:
         """Build dimensions section of YAML.
 
+        Uses simplified format with 'expr' and 'comment' fields.
+
         Args:
             dimensions: List of Dimension models
 
@@ -131,18 +142,15 @@ class YAMLGenerator:
                 "name": dimension.name,
             }
 
+            # Use 'expr' for both column-based and custom dimensions
             if dimension.type == "column":
-                dimension_dict["column"] = dimension.column
-                if dimension.description:
-                    dimension_dict["description"] = dimension.description
-                if dimension.data_type:
-                    dimension_dict["type"] = dimension.data_type
+                dimension_dict["expr"] = dimension.column
             elif dimension.type == "custom":
-                dimension_dict["expression"] = dimension.expression
-                if dimension.description:
-                    dimension_dict["description"] = dimension.description
-                if dimension.data_type:
-                    dimension_dict["type"] = dimension.data_type
+                dimension_dict["expr"] = dimension.expression
+
+            # Use 'comment' instead of 'description'
+            if dimension.description:
+                dimension_dict["comment"] = dimension.description
 
             dimensions_list.append(dimension_dict)
 
@@ -151,6 +159,8 @@ class YAMLGenerator:
     @staticmethod
     def _build_measures(measures: list[Measure]) -> list[Dict[str, Any]]:
         """Build measures section of YAML.
+
+        Uses simplified format with 'expr' field.
 
         Args:
             measures: List of Measure models
@@ -163,14 +173,8 @@ class YAMLGenerator:
         for measure in measures:
             measure_dict = {
                 "name": measure.name,
-                "expression": measure.expression,
+                "expr": measure.expression,
             }
-
-            if measure.description:
-                measure_dict["description"] = measure.description
-
-            if measure.data_type:
-                measure_dict["type"] = measure.data_type
 
             measures_list.append(measure_dict)
 

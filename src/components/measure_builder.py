@@ -79,7 +79,7 @@ class MeasureBuilder:
             "Builder Mode",
             options=["Simple", "Advanced"],
             horizontal=True,
-            value=st.session_state[f"{key}_mode"],
+            index=0 if st.session_state.get(f"{key}_mode", "Simple") == "Simple" else 1,
             key=f"{key}_mode_select",
             help="Simple: Quick measure presets | Advanced: Custom SQL expressions"
         )

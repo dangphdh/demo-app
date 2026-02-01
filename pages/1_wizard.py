@@ -4,18 +4,14 @@ import streamlit as st
 from typing import List, Dict, Any, Optional, Tuple
 
 # Import components and services
-from src.components import SchemaBrowser, DimensionBuilder, MeasureBuilder, JoinVisualizer, YAMLPreview
+from src.components import SchemaBrowser, DimensionBuilder, MeasureBuilder, YAMLPreview
 from src.services import DatabricksClient, TemplateLoader
 from src.utils import SessionManager, MetricViewStorage
-from src.models import MetricView, Source, Dimension, Measure, Join
-
-# Inject custom theme
-from src.ui import inject_theme, page_header, COLORS, SPACING
-inject_theme()
+from src.models import MetricView, Source, Dimension, Measure
 
 st.set_page_config(
     page_title="Wizard - Metric View Builder",
-    page_icon="⚡",
+    page_icon="✨",
     layout="wide"
 )
 
@@ -25,17 +21,14 @@ def init_wizard_state():
     if "wizard_step" not in st.session_state:
         st.session_state.wizard_step = 1
 
-    if "wizard_sources" not in st.session_state:
-        st.session_state.wizard_sources = []
+    if "wizard_source" not in st.session_state:
+        st.session_state.wizard_source = None  # Single source instead of list
 
     if "wizard_dimensions" not in st.session_state:
         st.session_state.wizard_dimensions = []
 
     if "wizard_measures" not in st.session_state:
         st.session_state.wizard_measures = []
-
-    if "wizard_joins" not in st.session_state:
-        st.session_state.wizard_joins = []
 
     if "wizard_catalog" not in st.session_state:
         st.session_state.wizard_catalog = "main"
@@ -52,36 +45,31 @@ def init_wizard_state():
 
 def render_header():
     """Render wizard header."""
-    page_header(
-        "Create Metric View",
-        "Follow the steps to configure your metric view"
-    )
+    st.title("✨ Create Metric View - Wizard")
+    st.markdown("Follow the steps to create your Databricks Metric View.")
 
     # Progress indicator
     steps = [
-        "Connect",
-        "Sources",
-        "Joins",
-        "Dimensions",
-        "Measures",
-        "Review"
+        "1️⃣ Connect",
+        "2️⃣ Source",
+        "3️⃣ Dimensions",
+        "4️⃣ Measures",
+        "5️⃣ Review"
     ]
 
     current_step = st.session_state.wizard_step - 1
-    total_steps = len(steps)
 
     # Progress bar
-    st.markdown(f"<p style='margin-bottom: {SPACING['xs']};'><strong>Step {current_step + 1} of {total_steps}:</strong> {steps[current_step]}</p>", unsafe_allow_html=True)
-    progress = current_step / (total_steps - 1)
+    progress = current_step / (len(steps) - 1)
     st.progress(progress)
 
     # Step indicators
     cols = st.columns(len(steps))
     for i, (col, step) in enumerate(zip(cols, steps)):
         if i <= current_step:
-            col.markdown(f"**{i+1}. {step}**")
+            col.markdown(f"**{step}**")
         else:
-            col.markdown(f"{i+1}. {step}")
+            col.markdown(f"{step}")
 
 
 def render_navigation():
@@ -92,18 +80,18 @@ def render_navigation():
 
     with col1:
         if st.session_state.wizard_step > 1:
-            if st.button("Previous", use_container_width=True):
+            if st.button("⬅️ Previous", use_container_width=True):
                 st.session_state.wizard_step -= 1
                 st.rerun()
 
     with col2:
-        if st.session_state.wizard_step < 6:
-            if st.button("Next", use_container_width=True, type="primary"):
+        if st.session_state.wizard_step < 5:
+            if st.button("Next ➡️", use_container_width=True, type="primary"):
                 st.session_state.wizard_step += 1
                 st.rerun()
 
     with col3:
-        if st.button("Back to Welcome", use_container_width=True):
+        if st.button("🏠 Back to Welcome", use_container_width=True):
             st.switch_page("pages/0_welcome.py")
 
 
@@ -112,77 +100,50 @@ def step_1_connect():
     st.markdown("### Step 1: Connect to Databricks")
 
     if not st.session_state.get("user_authenticated"):
-        st.warning("Please connect to Databricks from the sidebar first")
-        st.info("Use the sidebar to connect using service account or user credentials")
+        st.warning("⚠️ Please connect to Databricks from the sidebar first")
+        st.info("👈 Use the sidebar to connect using service account or user credentials")
         return False
 
-    st.success("Connected to Databricks!")
+    st.success("✅ Connected to Databricks!")
 
     # Show connection info
     config = st.session_state.databricks_config
-    st.info(f"Host: `{config.host}`")
-    st.info(f"Auth: `{config.auth_method}`")
+    st.info(f"🔗 Host: `{config.host}`")
+    st.info(f"🔑 Auth: `{config.auth_method}`")
 
     return True
 
 
 def step_2_sources(client: DatabricksClient):
-    """Step 2: Select data sources."""
-    st.markdown("### Step 2: Select Data Sources")
+    """Step 2: Select data source."""
+    st.markdown("### Step 2: Select Data Source")
 
-    # Use schema browser to select tables
-    selected_tables = SchemaBrowser.render_multi_select(client, key="wizard_sources")
+    st.info("ℹ️ Select a single table for your metric view")
 
-    if selected_tables:
-        st.session_state.wizard_sources = selected_tables
-        st.success(f"Selected {len(selected_tables)} table(s)")
+    # Use schema browser to select tables (limit to one)
+    selected_tables = SchemaBrowser.render_multi_select(client, key="wizard_source")
 
-        # Show selected tables
-        for catalog, schema, table in selected_tables:
-            st.text(f"• {catalog}.{schema}.{table}")
-
-        return len(selected_tables) > 0
+    if selected_tables and len(selected_tables) > 0:
+        # Take only the first selected table
+        selected_table = selected_tables[0]
+        st.session_state.wizard_source = selected_table
+        catalog, schema, table = selected_table
+        st.success(f"✅ Selected table: {catalog}.{schema}.{table}")
+        if len(selected_tables) > 1:
+            st.warning("⚠️ Only the first selected table will be used (single-table mode)")
+        return True
     else:
-        st.info("Select one or more tables from the catalog browser above")
+        st.info("👆 Select a table from the catalog browser above")
         return False
 
 
-def step_3_joins():
-    """Step 3: Configure joins (if multiple tables)."""
-    st.markdown("### Step 3: Configure Joins")
+def step_3_dimensions(client: DatabricksClient):
+    """Step 3: Define dimensions."""
+    st.markdown("### Step 3: Define Dimensions")
 
-    if len(st.session_state.wizard_sources) < 2:
-        st.info("Only one table selected - joins not needed")
-        st.session_state.wizard_joins = []
-        return True
-
-    st.info("Configure how your tables relate to each other")
-
-    # Convert sources to dict format for join visualizer
-    sources = [
-        {
-            "name": f"{catalog}_{schema}_{table}",
-            "catalog": catalog,
-            "schema": schema,
-            "table": table
-        }
-        for catalog, schema, table in st.session_state.wizard_sources
-    ]
-
-    # Render join visualizer
-    joins = JoinVisualizer.render(sources, st.session_state.wizard_joins, key="wizard_joins")
-    st.session_state.wizard_joins = joins
-
-    return True
-
-
-def step_4_dimensions(client: DatabricksClient):
-    """Step 4: Define dimensions."""
-    st.markdown("### Step 4: Define Dimensions")
-
-    # Get columns from primary source (first table)
-    if st.session_state.wizard_sources:
-        catalog, schema, table = st.session_state.wizard_sources[0]
+    # Get columns from selected table
+    if st.session_state.wizard_source:
+        catalog, schema, table = st.session_state.wizard_source
 
         with st.spinner(f"Loading columns for {table}..."):
             success, columns, error = client.get_table_columns(catalog, schema, table)
@@ -200,21 +161,20 @@ def step_4_dimensions(client: DatabricksClient):
         st.session_state.wizard_dimensions = dimensions
 
         if dimensions:
-            st.success(f"Defined {len(dimensions)} dimension(s)")
-
-        return len(dimensions) > 0
+            st.success(f"✅ Defined {len(dimensions)} dimension(s)")
+        return True
 
     return False
 
 
-def step_5_measures():
-    """Step 5: Define measures."""
-    st.markdown("### Step 5: Define Measures")
+def step_4_measures():
+    """Step 4: Define measures."""
+    st.markdown("### Step 4: Define Measures")
 
-    # Get columns from primary source
+    # Get columns from selected source
     columns = []
-    if st.session_state.wizard_sources:
-        catalog, schema, table = st.session_state.wizard_sources[0]
+    if st.session_state.wizard_source:
+        catalog, schema, table = st.session_state.wizard_source
         client = DatabricksClient(st.session_state.databricks_config)
         success, columns, error = client.get_table_columns(catalog, schema, table)
 
@@ -227,14 +187,14 @@ def step_5_measures():
     st.session_state.wizard_measures = measures
 
     if measures:
-        st.success(f"Defined {len(measures)} measure(s)")
+        st.success(f"✅ Defined {len(measures)} measure(s)")
 
     return len(measures) > 0
 
 
-def step_6_review():
-    """Step 6: Review and generate YAML."""
-    st.markdown("### Step 6: Review & Generate")
+def step_5_review():
+    """Step 5: Review and generate YAML."""
+    st.markdown("### Step 5: Review & Generate")
 
     col1, col2 = st.columns(2)
 
@@ -279,7 +239,7 @@ def step_6_review():
         st.session_state.wizard_description = description
 
         # Build metric view
-        if st.button("Generate Preview", use_container_width=True):
+        if st.button("🔄 Generate Preview", use_container_width=True):
             st.session_state.generate_preview = True
 
         if st.session_state.get("generate_preview", False):
@@ -290,21 +250,16 @@ def step_6_review():
                     YAMLPreview.render_summary(metric_view)
 
                 st.markdown("---")
-
-                # YAML Preview
-                with st.container():
-                    st.markdown(f"<div class='tech-card-header'>Live YAML Preview</div>", unsafe_allow_html=True)
-                    st.markdown(f"<div class='tech-code-preview'>", unsafe_allow_html=True)
-                    YAMLPreview.render(metric_view, show_download=True)
-                    st.markdown("</div>", unsafe_allow_html=True)
+                YAMLPreview.render(metric_view, show_download=True)
 
                 # Deploy button (placeholder for Phase 4)
-                if st.button("Deploy to Databricks", type="primary"):
-                    st.info("Deployment coming in Phase 4!")
+                if st.button("🚀 Deploy to Databricks", type="primary"):
+                    st.info("🚀 Deployment coming in Phase 4!")
 
                 return True
 
     return False
+
 
 
 def build_metric_view() -> Optional[MetricView]:
@@ -315,27 +270,26 @@ def build_metric_view() -> Optional[MetricView]:
     """
     # Validate required fields
     if not st.session_state.wizard_name:
-        st.error("Metric View name is required")
+        st.error("❌ Metric View name is required")
         return None
 
-    if not st.session_state.wizard_sources:
-        st.error("At least one source is required")
+    if not st.session_state.wizard_source:
+        st.error("❌ A source table is required")
         return None
 
     if not st.session_state.wizard_measures:
-        st.error("At least one measure is required")
+        st.error("❌ At least one measure is required")
         return None
 
-    # Build sources
-    sources = []
-    for i, (catalog, schema, table) in enumerate(st.session_state.wizard_sources):
-        sources.append(Source(
-            name=f"source_{i}",
-            type="table",
-            catalog=catalog,
-            schema=schema,
-            table=table
-        ))
+    # Build source from single table
+    catalog, schema, table = st.session_state.wizard_source
+    source = Source(
+        name="primary_source",
+        type="table",
+        catalog=catalog,
+        schema=schema,
+        table=table
+    )
 
     # Create metric view
     try:
@@ -344,17 +298,17 @@ def build_metric_view() -> Optional[MetricView]:
             catalog=st.session_state.wizard_catalog,
             schema=st.session_state.wizard_schema,
             description=st.session_state.wizard_description,
-            sources=sources,
+            sources=[source],
             dimensions=st.session_state.wizard_dimensions,
             measures=st.session_state.wizard_measures,
-            joins=st.session_state.wizard_joins,
-            primary_source="source_0"
+            joins=[],  # Empty joins for single-table metric views
+            primary_source="primary_source"
         )
 
         return metric_view
 
     except Exception as e:
-        st.error(f"Error building metric view: {str(e)}")
+        st.error(f"❌ Error building metric view: {str(e)}")
         return None
 
 
@@ -362,27 +316,26 @@ def autosave_wizard_progress():
     """Autosave current wizard progress."""
     try:
         # Build partial metric view from current state
-        if st.session_state.wizard_name and st.session_state.wizard_sources:
-            sources = []
-            for i, (catalog, schema, table) in enumerate(st.session_state.wizard_sources):
-                sources.append(Source(
-                    name=f"source_{i}",
-                    type="table",
-                    catalog=catalog,
-                    schema=schema,
-                    table=table
-                ))
+        if st.session_state.wizard_name and st.session_state.wizard_source:
+            catalog, schema, table = st.session_state.wizard_source
+            source = Source(
+                name="primary_source",
+                type="table",
+                catalog=catalog,
+                schema=schema,
+                table=table
+            )
 
             partial_mv = MetricView(
                 name=st.session_state.wizard_name,
                 catalog=st.session_state.wizard_catalog,
                 schema=st.session_state.wizard_schema,
                 description=st.session_state.wizard_description,
-                sources=sources,
+                sources=[source],
                 dimensions=st.session_state.wizard_dimensions,
                 measures=st.session_state.wizard_measures,
-                joins=st.session_state.wizard_joins,
-                primary_source="source_0"
+                joins=[],  # Empty joins for single-table metric views
+                primary_source="primary_source"
             )
 
             SessionManager.autosave(partial_mv)
@@ -415,22 +368,19 @@ def main():
         if client:
             step_valid = step_2_sources(client)
         else:
-            st.error("Please connect to Databricks first")
+            st.error("❌ Please connect to Databricks first")
 
     elif st.session_state.wizard_step == 3:
-        step_valid = step_3_joins()
+        if client:
+            step_valid = step_3_dimensions(client)
+        else:
+            st.error("❌ Please connect to Databricks first")
 
     elif st.session_state.wizard_step == 4:
-        if client:
-            step_valid = step_4_dimensions(client)
-        else:
-            st.error("Please connect to Databricks first")
+        step_valid = step_4_measures()
 
     elif st.session_state.wizard_step == 5:
-        step_valid = step_5_measures()
-
-    elif st.session_state.wizard_step == 6:
-        step_valid = step_6_review()
+        step_valid = step_5_review()
 
     # Autosave progress
     autosave_wizard_progress()
