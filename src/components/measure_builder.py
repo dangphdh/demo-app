@@ -45,7 +45,7 @@ class MeasureBuilder:
             st.session_state[f"{key}_measures"] = existing_measures.copy()
 
         if f"{key}_mode" not in st.session_state:
-            st.session_state[f"{key}_mode"] = "simple"
+            st.session_state[f"{key}_mode"] = "Simple"
 
         measures = st.session_state[f"{key}_measures"]
 
@@ -75,20 +75,21 @@ class MeasureBuilder:
                     st.markdown("---")
 
         # Mode toggle
+        current_mode = st.session_state.get(f"{key}_mode", "Simple")
         mode = st.radio(
             "Builder Mode",
             options=["Simple", "Advanced"],
             horizontal=True,
-            index=0 if st.session_state.get(f"{key}_mode", "Simple") == "Simple" else 1,
+            index=0 if current_mode == "Simple" else 1,
             key=f"{key}_mode_select",
-            help="Simple: Quick measure presets | Advanced: Custom SQL expressions"
+            help="Simple: Select column & aggregation | Advanced: Custom SQL expressions"
         )
 
-        if mode != st.session_state[f"{key}_mode"]:
+        if mode != current_mode:
             st.session_state[f"{key}_mode"] = mode
             st.rerun()
 
-        if mode == "simple":
+        if mode == "Simple":
             MeasureBuilder._render_simple_builder(available_columns, key)
         else:
             MeasureBuilder._render_advanced_builder(key)
