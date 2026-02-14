@@ -25,7 +25,9 @@ class YAMLPreview:
         Returns:
             Generated YAML string
         """
-        st.subheader("📄 YAML Preview")
+        # YAML Preview
+        st.markdown(f"<div class='tech-card-header'>YAML Preview</div>", unsafe_allow_html=True)
+        st.markdown(f"<div class='tech-code-preview'>", unsafe_allow_html=True)
 
         if not metric_view:
             st.info("""
@@ -37,6 +39,7 @@ class YAMLPreview:
             - Define dimensions
             - Define measures
             """)
+            st.markdown("</div>", unsafe_allow_html=True)
             return ""
 
         # Generate YAML
@@ -45,6 +48,7 @@ class YAMLPreview:
 
             # Display YAML with syntax highlighting
             st.code(yaml_content, language="yaml", line_numbers=True)
+            st.markdown("</div>", unsafe_allow_html=True)
 
             # Show download button
             if show_download:
@@ -52,7 +56,7 @@ class YAMLPreview:
 
                 with col1:
                     st.download_button(
-                        label="📥 Download YAML",
+                        label="Download YAML",
                         data=yaml_content,
                         file_name=f"{metric_view.name}_metric_view.yaml",
                         mime="text/yaml",
@@ -60,12 +64,12 @@ class YAMLPreview:
                     )
 
                 with col2:
-                    if st.button("📋 Copy to Clipboard", key=f"{key}_copy"):
+                    if st.button("Copy to Clipboard", key=f"{key}_copy"):
                         st.clipboard_copy(yaml_content)
                         st.success("✅ Copied to clipboard!")
 
             # Show validation button
-            if st.button("✅ Validate YAML", key=f"{key}_validate"):
+            if st.button("Validate YAML", key=f"{key}_validate"):
                 with st.spinner("Validating..."):
                     YAMLPreview._show_validation(metric_view)
 
@@ -133,14 +137,14 @@ class YAMLPreview:
         try:
             yaml_content = YAMLGenerator.generate(metric_view)
 
-            with st.expander("📄 View Generated YAML", expanded=False):
+            with st.expander("View Generated YAML", expanded=False):
                 st.code(yaml_content, language="yaml", line_numbers=True)
 
                 col1, col2 = st.columns(2)
 
                 with col1:
                     st.download_button(
-                        label="📥 Download",
+                        label="Download",
                         data=yaml_content,
                         file_name=f"{metric_view.name}_metric_view.yaml",
                         mime="text/yaml",
@@ -149,7 +153,7 @@ class YAMLPreview:
                     )
 
                 with col2:
-                    if st.button("📋 Copy", key=f"{key}_copy"):
+                    if st.button("Copy", key=f"{key}_copy"):
                         st.clipboard_copy(yaml_content)
                         st.success("Copied!")
 

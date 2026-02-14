@@ -5,7 +5,7 @@ from typing import List, Dict, Any, Optional, Tuple
 
 # Import components and services
 from src.components import SchemaBrowser, DimensionBuilder, MeasureBuilder, YAMLPreview
-from src.services import DatabricksClient, TemplateLoader
+from src.services import DatabricksClient, TemplateLoader, YAMLGenerator
 from src.utils import SessionManager, MetricViewStorage
 from src.models import MetricView, Source, Dimension, Measure
 
@@ -252,9 +252,38 @@ def step_5_review():
                 st.markdown("---")
                 YAMLPreview.render(metric_view, show_download=True)
 
-                # Deploy button (placeholder for Phase 4)
-                if st.button("🚀 Deploy to Databricks", type="primary"):
-                    st.info("🚀 Deployment coming in Phase 4!")
+                # Deploy button
+                if st.button("🚀 Deploy to Databricks", type="primary", key="wizard_deploy"):
+                    if not st.session_state.get("user_authenticated"):
+                        st.error("❌ Please connect to Databricks first (use sidebar)")
+                    else:
+                        with st.spinner("Deploying metric view to Databricks..."):
+                            yaml_content = YAMLGenerator.generate(metric_view)
+                            client = DatabricksClient(st.session_state.databricks_config)
+
+                            success, result_msg, error = client.deploy_metric_view(
+                                metric_view_name=metric_view.name,
+                                catalog=metric_view.catalog,
+                                schema=metric_view.schema,
+                                yaml_content=yaml_content
+                            )
+
+                            if success:
+                                st.success(f"""
+                                ✅ **Deployment Successful!**
+
+                                Your metric view **{metric_view.name}** has been deployed!
+
+                                **Location:** `{metric_view.catalog}.{metric_view.schema}.{metric_view.name}`
+
+                                **Next Steps:**
+                                1. Go to Databricks Catalog Explorer
+                                2. Navigate to {metric_view.catalog}.{metric_view.schema}
+                                3. Find your metric view
+                                4. Start querying it!
+                                """)
+                            else:
+                                st.error(f"❌ Deployment failed: {error}")
 
                 return True
 
